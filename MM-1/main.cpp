@@ -15,7 +15,7 @@ class MasterMind
     public:
         MasterMind(int _positions, int _colors);
         bool running() const;
-        void iteration(std::istream& in, std::ostream& out, std::ostream& err);
+        bool iteration(const std::vector<int>& suggestion, std::ostream& out, std::ostream& err);
 };
 
 MasterMind::MasterMind(int _positions, int _colors): positions(_positions), colors(_colors), finished(false)
@@ -33,34 +33,42 @@ bool MasterMind::correct(const MasterMind::numbers& suggestion)
     return suggestion.size() == positions && std::find_if(suggestion.begin(), suggestion.end(), [this](int val) { return !(1 <= val && val <= colors); }) == suggestion.end();
 }
 
-void MasterMind::iteration(std::istream& in, std::ostream& out, std::ostream& err)
+bool MasterMind::iteration(const std::vector<int>& suggestion, std::ostream& out, std::ostream& err)
 {
-    numbers suggestion;
     int w = 0, b = 0;
-start:
-    if (!in.good()) throw std::runtime_error("Input cannot be read");
-    err << "> ";
-    std::copy_n(std::istream_iterator<int>(in), positions, std::inserter(suggestion, suggestion.begin()));
     if (!correct(suggestion))
     {
         err << "Wrong input, please, try again" << std::endl;
-        goto start;
+		return false;
     }
-    for (int i = 0; i < positions; ++i)
-    {
-        b += suggestion[i] == answer[i];
-        w += std::find(answer.begin(), answer.end(), suggestion[i]) != answer.end();
-    }
+	std::inner_product(suggestion.begin(), suggestion.end(), answer.begin(), 0, 
+			[](int, int) { return 0; },
+			[&](int sug, int ans) { b += sug == ans; w += std::find(answer.begin(), answer.end(), sug) != answer.end(); return 0;} );
     out << b << " " << w << std::endl;
     if (b == positions) finished = true;
+	return finished;
 }
 
+template<class T, int n>
+class VectorReader
+{
+	public:
+		std::vector<T> result;
+};
+
+template<class T, int n>
+std::istream& operator>>(std::istream& stream, VectorReader<T, n>& vr)
+{
+	vr.result.clear();
+	std::copy_n(std::istream_iterator<T>(stream), n, std::inserter(vr.result, vr.result.begin()));
+}
+
+enum { N = 4, M = 6 };
 
 int main(int ac, char** av)
 {
-    MasterMind game(4, 6);
-    while (game.running())
-    {
-        game.iteration(std::cin, std::cout, std::cerr);
-    }
+    MasterMind game(N, M);
+	std::find_if(std::istream_iterator<VectorReader<int, N>>(std::cin),
+	    std::istream_iterator<VectorReader<int, N>>(),
+		[&](const VectorReader<int, N>& sug) { return game.iteration(sug.result, std::cout, std::cerr); });
 }
