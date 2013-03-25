@@ -29,9 +29,9 @@ class HexTopology
             if (coord_incorrect(std::make_pair(row, col))) throw std::range_error("range error");
 
             List ret =
-            std::inner_product(dx[col], dx[col] + sizeof(dx[col]), dy, List(),
+            std::inner_product(dx[col % 2], dx[col % 2] + sizeof(dy) / sizeof(dy[0]), dy, List(),
                 [](List v, const std::pair<int,int>& p) { v.push_back(p); return v; },
-                [](int a, int b) { return std::make_pair(a, b); });
+                [row, col](int a, int b) { return std::make_pair(row + a, col + b); });
             
             ret.erase(std::remove_if(ret.begin(), ret.end(),
                 [this](const std::pair<int,int>& p) { return this->coord_incorrect(p); }),
