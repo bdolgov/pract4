@@ -1,49 +1,113 @@
+#include <iostream>
 #include <stdexcept>
-#include <vector>
 #include <memory>
-#include <algorithm>
+#include <vector>
 
-template<class T>
-class PointerMatrix
+template<typename T>
+class smart_pointer
 {
-    private:
-        int rows;
-        int cols;
-        std::vector<std::vector<std::unique_ptr<T> > > m;
-        class Ref
-        {
-            private:
-                std::unique_ptr<T>& x;
-            public:
-                Ref(std::unique_ptr<T>& _x): x(_x) {}
-                Ref& operator=(T* y) { x.reset(y); return *this;}
-                operator T*() { return x.get(); }
-        };
-    public:
-        static const int ROWS_MAX = 16384, COLS_MAX = 16384;
-        int get_rows() const { return rows; }
-        int get_cols() const { return cols; }
-        PointerMatrix(const PointerMatrix&) = delete;
-        PointerMatrix& operator=(const PointerMatrix&) = delete;
-        Ref at(int row, int col)
-        {
-            if (row >= rows || col >= cols) throw std::range_error("Range error");
-            return Ref(m[row][col]);
-        }
-        T* at(int row, int col) const 
-        {
-            if (row >= rows || col >= cols) throw std::range_error("Range error");
-            return m[row][col].get();
-        }
-        PointerMatrix(int _rows, int _cols, T* obj): rows(_rows), cols(_cols), m()
-        {
-            if (rows <= 0 || cols <= 0 || rows > ROWS_MAX || cols > COLS_MAX || !obj)
-                throw std::invalid_argument("Invalid argument");
-            std::generate_n(std::back_inserter(m), rows, [obj, _cols]() {
-                    std::vector<std::unique_ptr<T> > tmp;
-                    std::generate_n(std::back_inserter(tmp), _cols, [obj]() {
-                        return std::unique_ptr<T>(obj->clone()); });
-                    return tmp;
-            });
-        }
+    std::unique_ptr<T>& pointer;
+public:
+    smart_pointer(std::unique_ptr<T>&);
+    smart_pointer& operator=(T*);
+    operator T*();
 };
+
+template<typename T>
+smart_pointer<T>::smart_pointer(std::unique_ptr<T>& from)
+    : pointer(from)
+{}
+
+template<typename T>
+smart_pointer<T>& smart_pointer<T>::operator=(T* target)
+{
+    pointer.reset(target);
+    return *this;
+}
+
+template<typename T>
+smart_pointer<T>::operator T*()
+{
+    return pointer.get();
+}
+
+template<typename T>
+class PointerMatrix final
+{
+
+    int rows, cols;
+    std::vector<std::vector<std::unique_ptr<T>>> m;
+public:
+    static const int ROWS_MAX = 16384;
+    static const int COLS_MAX = 16384;
+
+    PointerMatrix(int, int, T*);
+
+    PointerMatrix(const PointerMatrix&) = delete;
+    PointerMatrix& operator=(const PointerMatrix&) = delete;
+
+    int get_rows() const {return rows;}
+    int get_cols() const {return cols;}
+
+    T* at(int, int) const;
+    smart_pointer<T> at(int, int);
+};
+
+template<typename T>
+PointerMatrix<T>::PointerMatrix(int _rows, int _cols, T* t)
+    : rows(_rows), cols(_cols), m()
+{
+    if (_rows <= 0 or _cols <= 0 or _rows > ROWS_MAX
+        or _cols > COLS_MAX or t == nullptr) {
+        throw std::invalid_argument("Hello, sweetie!");
+    }
+    for (auto i = 0; i < _cols; ++i) {
+        m.emplace_back(std::vector<std::unique_ptr<T>>());
+        for (auto j = 0; j < _rows; ++j) {
+            m[i].emplace_back(std::unique_ptr<T>(t->clone()));
+        }
+    }
+}
+
+template<typename T>
+smart_pointer<T> PointerMatrix<T>::at(int row, int col)
+{
+    if (row < 0 or col < 0 or row >= rows or col >= cols) {
+        throw std::range_error("Allons-y, Alonso!");
+    }
+    return smart_pointer<T>(m[row][col]);
+}
+
+template<typename T>
+T* PointerMatrix<T>::at(int row, int col) const
+{
+    if (row < 0 or col < 0 or row >= rows or col >= cols) {
+        throw std::range_error("Fantastic!");
+    }
+    return m[row][col].get();
+}
+
+// class Digit final
+// {
+// public:
+//     int x;
+//     Digit(int y) : x(y) {}
+//     virtual ~Digit() {}
+//     virtual Digit* clone() {
+//         return new Digit(this->x);
+//     }
+// };
+
+// #include <iostream>
+
+// int main()
+// {
+//     Digit mydigit(43);
+//     PointerMatrix<Digit> matrix(100, 100, &mydigit);
+//     Digit my_other_digit(1);
+//     matrix.at(0, 0) = &my_other_digit;
+//     Digit* ppointer = matrix.at(0, 0);
+//     std::cout << ppointer->x << std::endl;
+//     matrix.at(0, 0) = &my_other_digit;
+//     return 0;
+// }
