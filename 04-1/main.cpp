@@ -6,15 +6,15 @@
 template<typename T>
 class smart_pointer
 {
-    std::unique_ptr<T>& pointer;
+    std::unique_ptr<T> pointer;
 public:
-    smart_pointer(std::unique_ptr<T>&);
+    smart_pointer(T*);
     smart_pointer& operator=(T*);
     operator T*();
 };
 
 template<typename T>
-smart_pointer<T>::smart_pointer(std::unique_ptr<T>& from)
+smart_pointer<T>::smart_pointer(T* from)
     : pointer(from)
 {}
 
@@ -36,7 +36,7 @@ class PointerMatrix final
 {
 
     int rows, cols;
-    std::vector<std::vector<std::unique_ptr<T>>> m;
+    std::vector<std::vector<smart_pointer<T>>> m;
 public:
     static const int ROWS_MAX = 16384;
     static const int COLS_MAX = 16384;
@@ -50,7 +50,7 @@ public:
     int get_cols() const {return cols;}
 
     T* at(int, int) const;
-    smart_pointer<T> at(int, int);
+    smart_pointer<T>& at(int, int);
 };
 
 template<typename T>
@@ -62,20 +62,20 @@ PointerMatrix<T>::PointerMatrix(int _rows, int _cols, T* t)
         throw std::invalid_argument("Hello, sweetie!");
     }
     for (auto i = 0; i < _cols; ++i) {
-        m.emplace_back(std::vector<std::unique_ptr<T>>());
+        m.emplace_back(std::vector<smart_pointer<T>>());
         for (auto j = 0; j < _rows; ++j) {
-            m[i].emplace_back(std::unique_ptr<T>(t->clone()));
+            m[i].emplace_back(smart_pointer<T>(t->clone() ));
         }
     }
 }
 
 template<typename T>
-smart_pointer<T> PointerMatrix<T>::at(int row, int col)
+smart_pointer<T>& PointerMatrix<T>::at(int row, int col)
 {
     if (row < 0 or col < 0 or row >= rows or col >= cols) {
         throw std::range_error("Allons-y, Alonso!");
     }
-    return smart_pointer<T>(m[row][col]);
+    return m[row][col];
 }
 
 template<typename T>
@@ -87,27 +87,25 @@ T* PointerMatrix<T>::at(int row, int col) const
     return m[row][col].get();
 }
 
-// class Digit final
-// {
-// public:
-//     int x;
-//     Digit(int y) : x(y) {}
-//     virtual ~Digit() {}
-//     virtual Digit* clone() {
-//         return new Digit(this->x);
-//     }
-// };
+class Digit final
+{
+public:
+    int x;
+    Digit(int y) : x(y) {}
+    virtual ~Digit() {}
+    virtual Digit* clone() {
+        return new Digit(this->x);
+    }
+};
 
 // #include <iostream>
 
 // int main()
 // {
-//     Digit mydigit(43);
 //     PointerMatrix<Digit> matrix(100, 100, &mydigit);
-//     Digit my_other_digit(1);
 //     matrix.at(0, 0) = &my_other_digit;
-//     Digit* ppointer = matrix.at(0, 0);
-//     std::cout << ppointer->x << std::endl;
-//     matrix.at(0, 0) = &my_other_digit;
+//     // Digit* ppointer = matrix.at(0, 0);
+//     // std::cout << ppointer->x << std::endl;
+//     // matrix.at(0, 0) = &my_other_digit;
 //     return 0;
 // }
